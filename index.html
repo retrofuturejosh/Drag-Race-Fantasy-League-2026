@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drag League 2026 — Season 18 Standings</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --surface2: #1f1f1f;
+      --border: #2a2a2a;
+      --accent: #c026d3;
+      --accent2: #7c3aed;
+      --gold: #f59e0b;
+      --silver: #94a3b8;
+      --bronze: #cd7c4e;
+      --text: #f1f5f9;
+      --muted: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #1a0025 0%, #0d001a 50%, #000813 100%);
+      border-bottom: 2px solid var(--accent);
+      padding: 32px 24px 28px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(192,38,211,.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    header .crown { font-size: 2.4rem; line-height: 1; }
+    header h1 {
+      font-size: clamp(1.6rem, 5vw, 2.8rem);
+      font-weight: 800;
+      background: linear-gradient(90deg, #e879f9, #a78bfa, #e879f9);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: .04em;
+      margin-top: 4px;
+    }
+    header p {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-top: 6px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    #week-badge {
+      display: inline-block;
+      margin-top: 12px;
+      background: var(--accent);
+      color: #fff;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 999px;
+    }
+
+    /* ── NAV TABS ── */
+    nav {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 20px 16px 0;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 8px 22px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: .88rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      transition: all .2s;
+    }
+    .tab-btn:hover { border-color: var(--accent); color: var(--text); }
+    .tab-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── LEADERBOARD ── */
+    .leaderboard { display: flex; flex-direction: column; gap: 10px; }
+
+    .player-card {
+      display: grid;
+      grid-template-columns: 52px 1fr auto;
+      align-items: center;
+      gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 20px;
+      transition: transform .15s, border-color .15s;
+      cursor: default;
+    }
+    .player-card:hover { transform: translateX(4px); border-color: var(--accent); }
+    .player-card.rank-1 { border-color: var(--gold); background: linear-gradient(90deg, #1c1500 0%, var(--surface) 40%); }
+    .player-card.rank-2 { border-color: var(--silver); background: linear-gradient(90deg, #0e1218 0%, var(--surface) 40%); }
+    .player-card.rank-3 { border-color: var(--bronze); background: linear-gradient(90deg, #1a0e05 0%, var(--surface) 40%); }
+
+    .rank-num {
+      font-size: 1.35rem;
+      font-weight: 800;
+      text-align: center;
+      width: 36px;
+    }
+    .rank-1 .rank-num { color: var(--gold); }
+    .rank-2 .rank-num { color: var(--silver); }
+    .rank-3 .rank-num { color: var(--bronze); }
+    .rank-num.other { color: var(--muted); font-size: 1rem; }
+
+    .player-info .name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .player-info .week-scores {
+      font-size: .76rem;
+      color: var(--muted);
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .player-info .week-scores span {
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .week-score-pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1px 6px;
+      font-size: .72rem;
+      color: var(--muted);
+    }
+    .week-score-pill.latest {
+      border-color: var(--accent);
+      color: #e879f9;
+    }
+
+    .score-badge {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text);
+      min-width: 60px;
+      text-align: right;
+    }
+    .rank-1 .score-badge { color: var(--gold); }
+    .rank-2 .score-badge { color: var(--silver); }
+    .rank-3 .score-badge { color: var(--bronze); }
+
+    /* ── WEEKLY TABLE ── */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      font-size: .85rem;
+    }
+    thead th {
+      background: var(--surface2);
+      padding: 12px 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    thead th:first-child { text-align: left; }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td {
+      padding: 10px 14px;
+      text-align: center;
+      color: var(--muted);
+    }
+    tbody td:first-child {
+      text-align: left;
+      color: var(--text);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .cell-score {
+      font-weight: 700;
+      color: var(--text);
+    }
+    .cell-score.top { color: #e879f9; }
+    .cell-empty { color: #333; }
+    .cell-latest { color: var(--accent); font-weight: 800; }
+
+    /* ── CHART ── */
+    .chart-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+    }
+    .chart-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .player-card { grid-template-columns: 40px 1fr auto; gap: 10px; padding: 12px 14px; }
+      .score-badge { font-size: 1.25rem; }
+    }
+
+    /* ── PLAYER MODAL ── */
+    .player-card { cursor: pointer; }
+
+    #player-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.75);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    #player-modal-overlay.open { display: flex; }
+
+    #player-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 620px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 60px rgba(0,0,0,.7);
+      animation: modalIn .2s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(16px) scale(.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    #modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 0;
+    }
+    #modal-player-name {
+      font-size: 1.4rem;
+      font-weight: 800;
+    }
+    #modal-rank-badge {
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 3px 12px;
+      border-radius: 999px;
+      border: 1px solid;
+    }
+    #modal-close {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color .15s, color .15s;
+      flex-shrink: 0;
+    }
+    #modal-close:hover { border-color: var(--accent); color: var(--text); }
+
+    #modal-stats {
+      display: flex;
+      gap: 12px;
+      padding: 16px 24px 0;
+      flex-wrap: wrap;
+    }
+    .modal-stat {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      flex: 1;
+      min-width: 90px;
+      text-align: center;
+    }
+    .modal-stat .stat-val {
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .modal-stat .stat-lbl {
+      font-size: .7rem;
+      color: var(--muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    #modal-chart-wrap {
+      padding: 20px 24px 24px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="crown">👑</div>
+  <h1>Drag League 2026</h1>
+  <p>Season 18 · Official Standings</p>
+  <span id="week-badge">Loading…</span>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-tab="leaderboard">🏆 Leaderboard</button>
+  <button class="tab-btn" data-tab="weekly">📅 Week by Week</button>
+  <button class="tab-btn" data-tab="chart">📈 Score Chart</button>
+</nav>
+
+<main>
+  <div id="leaderboard" class="tab-panel active"></div>
+  <div id="weekly" class="tab-panel"></div>
+  <div id="chart" class="tab-panel"></div>
+</main>
+
+<!-- Player Modal -->
+<div id="player-modal-overlay">
+  <div id="player-modal">
+    <div id="modal-header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="modal-player-name"></span>
+        <span id="modal-rank-badge"></span>
+      </div>
+      <button id="modal-close" aria-label="Close">✕</button>
+    </div>
+    <div id="modal-stats"></div>
+    <div id="modal-chart-wrap"><canvas id="modal-chart"></canvas></div>
+  </div>
+</div>
+
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────────
+// Fetched from current-standings.csv — update that file in the repo to refresh standings
+let weeks, players, activeWeeks, latestWeek, sorted;
+
+// ── PARSE ─────────────────────────────────────────────────────────────────────
+function parseCSV(raw) {
+  const lines = raw.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  const weeks = headers; // e.g. ["Week 1", "Week 2", ...]
+
+  // players[name] = { name, scores: { "Week 1": 11, ... } }
+  const players = {};
+
+  for (let r = 1; r < lines.length; r++) {
+    const cells = lines[r].split(',');
+    cells.forEach((cell, colIdx) => {
+      cell = cell.trim();
+      if (!cell) return;
+      const match = cell.match(/^(.+?):\s*(-?\d+)$/);
+      if (!match) return;
+      const name = match[1].trim();
+      const score = parseInt(match[2], 10);
+      const week = weeks[colIdx];
+      if (!players[name]) players[name] = { name, scores: {} };
+      players[name].scores[week] = score;
+    });
+  }
+
+  return { weeks, players };
+}
+
+// ── INIT (called once CSV text is available) ────────────────────────────────
+function init(csvText) {
+  ({ weeks, players } = parseCSV(csvText));
+
+  // Determine which weeks have data
+  activeWeeks = weeks.filter(w =>
+    Object.values(players).some(p => p.scores[w] !== undefined)
+  );
+
+  // Latest week with data
+  latestWeek = activeWeeks[activeWeeks.length - 1];
+
+  // Sort players by latest score desc, then by name
+  sorted = Object.values(players).sort((a, b) => {
+    const sa = a.scores[latestWeek] ?? -Infinity;
+    const sb = b.scores[latestWeek] ?? -Infinity;
+    return sb - sa || a.name.localeCompare(b.name);
+  });
+
+  document.getElementById('week-badge').textContent =
+    `Current Week: ${latestWeek} · ${activeWeeks.length} of ${weeks.length} Weeks Played`;
+
+  // Clear any previous render (supports re-loading)
+  document.getElementById('leaderboard').innerHTML = '';
+  document.getElementById('weekly').innerHTML = '';
+  document.getElementById('chart').innerHTML = '';
+  chartBuilt = false;
+
+  buildLeaderboard();
+  buildWeeklyTable();
+}
+
+// ── TAB LOGIC ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'chart' && !chartBuilt) buildChart();
+  });
+});
+
+// ── LEADERBOARD TAB ───────────────────────────────────────────────────────────
+function buildLeaderboard() {
+  const container = document.getElementById('leaderboard');
+  const div = document.createElement('div');
+  div.className = 'leaderboard';
+
+  // Compute ranks: tied players share the same rank, next rank skips
+  const ranks = [];
+  sorted.forEach((player, idx) => {
+    if (idx === 0) { ranks.push(1); return; }
+    const prevScore = sorted[idx - 1].scores[latestWeek] ?? -Infinity;
+    const thisScore = player.scores[latestWeek] ?? -Infinity;
+    ranks.push(thisScore === prevScore ? ranks[idx - 1] : idx + 1);
+  });
+
+  sorted.forEach((player, idx) => {
+    const rank = ranks[idx];
+    const latestScore = player.scores[latestWeek] ?? '—';
+
+    const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+    const rankClass = rank <= 3 ? `rank-${rank}` : '';
+
+    // Build mini week pills
+    const pills = activeWeeks.map(w => {
+      const s = player.scores[w];
+      const isLatest = w === latestWeek;
+      if (s === undefined) return '';
+      return `<span class="week-score-pill ${isLatest ? 'latest' : ''}">${w.replace('Week ', 'W')}: ${s}</span>`;
+    }).join('');
+
+    const card = document.createElement('div');
+    card.className = `player-card ${rankClass}`;
+    card.dataset.playerName = player.name;
+    card.innerHTML = `
+      <div class="rank-num ${rank > 3 ? 'other' : ''}">${rankEmoji || rank}</div>
+      <div class="player-info">
+        <div class="name">${player.name}</div>
+        <div class="week-scores">${pills}</div>
+      </div>
+      <div class="score-badge">${latestScore}</div>
+    `;
+    card.addEventListener('click', () => openPlayerModal(player, rank));
+    div.appendChild(card);
+  });
+
+  const label = document.createElement('p');
+  label.className = 'section-title';
+  label.style.textAlign = 'center';
+  label.style.marginTop = '20px';
+  label.textContent = `Ranked by score after ${latestWeek}`;
+  div.appendChild(label);
+
+  container.appendChild(div);
+}
+
+// ── WEEKLY TABLE TAB ──────────────────────────────────────────────────────────
+function buildWeeklyTable() {
+  const container = document.getElementById('weekly');
+
+  // Find top scorer per week
+  const weekTopScore = {};
+  activeWeeks.forEach(w => {
+    weekTopScore[w] = Math.max(...Object.values(players).map(p => p.scores[w] ?? -Infinity));
+  });
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'table-wrapper';
+
+  const table = document.createElement('table');
+
+  // Header
+  const thead = document.createElement('thead');
+  const hrow = document.createElement('tr');
+  hrow.innerHTML = `<th>Player</th>` +
+    activeWeeks.map(w => `<th>${w}</th>`).join('');
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  // Body — rows sorted by latest score
+  const tbody = document.createElement('tbody');
+  sorted.forEach(player => {
+    const tr = document.createElement('tr');
+    let cells = `<td>${player.name}</td>`;
+    activeWeeks.forEach(w => {
+      const s = player.scores[w];
+      if (s === undefined) {
+        cells += `<td class="cell-empty">—</td>`;
+      } else {
+        const isLatest = w === latestWeek;
+        const isTop = s === weekTopScore[w];
+        cells += `<td class="cell-score ${isLatest ? 'cell-latest' : ''} ${isTop ? 'top' : ''}">${s}</td>`;
+      }
+    });
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  wrapper.appendChild(table);
+  container.appendChild(wrapper);
+
+  const note = document.createElement('p');
+  note.className = 'section-title';
+  note.style.textAlign = 'center';
+  note.style.marginTop = '14px';
+  note.innerHTML = `<span style="color:#e879f9">Purple</span> = this week's score &nbsp;·&nbsp; <span style="color:#e879f9">Bold purple</span> = week high score`;
+  container.appendChild(note);
+}
+
+// ── CHART TAB ─────────────────────────────────────────────────────────────────
+let chartBuilt = false;
+
+// Palette — distinct colors for up to 20 players
+const PALETTE = [
+  '#e879f9','#a78bfa','#38bdf8','#34d399','#fb923c',
+  '#f87171','#facc15','#4ade80','#60a5fa','#c084fc',
+  '#f472b6','#2dd4bf','#a3e635','#fbbf24','#818cf8',
+  '#fb7185','#6ee7b7','#93c5fd','#d8b4fe','#fcd34d',
+];
+
+function buildChart() {
+  chartBuilt = true;
+  const container = document.getElementById('chart');
+
+  const title = document.createElement('div');
+  title.className = 'chart-title';
+  title.textContent = 'Score Progression — All Players';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'chart-container';
+  wrapper.appendChild(title);
+
+  const canvas = document.createElement('canvas');
+  canvas.id = 'scoreChart';
+  canvas.style.maxHeight = '520px';
+  wrapper.appendChild(canvas);
+  container.appendChild(wrapper);
+
+  const datasets = sorted.map((player, idx) => ({
+    label: player.name,
+    data: activeWeeks.map(w => player.scores[w] ?? null),
+    borderColor: PALETTE[idx % PALETTE.length],
+    backgroundColor: PALETTE[idx % PALETTE.length] + '22',
+    borderWidth: 2,
+    pointRadius: 4,
+    pointHoverRadius: 7,
+    tension: 0.3,
+    spanGaps: false,
+  }));
+
+  new Chart(canvas, {
+    type: 'line',
+    data: { labels: activeWeeks, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            color: '#94a3b8',
+            font: { size: 11 },
+            padding: 10,
+            boxWidth: 14,
+            boxHeight: 3,
+          },
+        },
+        tooltip: {
+          backgroundColor: '#1f1f1f',
+          borderColor: '#2a2a2a',
+          borderWidth: 1,
+          titleColor: '#f1f5f9',
+          bodyColor: '#94a3b8',
+          padding: 10,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: '#1f1f1f' },
+          ticks: { color: '#64748b', font: { size: 11 } },
+        },
+        y: {
+          grid: { color: '#1f1f1f' },
+          ticks: { color: '#64748b', font: { size: 11 } },
+          title: { display: true, text: 'Cumulative Score', color: '#64748b' },
+        },
+      },
+    },
+  });
+}
+
+// ── PLAYER MODAL ─────────────────────────────────────────────────────────────
+let modalChartInstance = null;
+
+function openPlayerModal(player, rank) {
+  const overlay = document.getElementById('player-modal-overlay');
+  const color = PALETTE[(rank - 1) % PALETTE.length];
+
+  // Header
+  document.getElementById('modal-player-name').textContent = player.name;
+  document.getElementById('modal-player-name').style.color = color;
+  const badge = document.getElementById('modal-rank-badge');
+  const rankEmoji = rank === 1 ? '🥇 1st' : rank === 2 ? '🥈 2nd' : rank === 3 ? '🥉 3rd' : `#${rank}`;
+  badge.textContent = rankEmoji;
+  badge.style.color = color;
+  badge.style.borderColor = color;
+  badge.style.background = color + '18';
+
+  // Stats
+  const scores = activeWeeks.map(w => player.scores[w]).filter(s => s !== undefined);
+  const currentScore = scores[scores.length - 1] ?? 0;
+  const weeklyGains = scores.map((s, i) => i === 0 ? s : s - scores[i - 1]);
+  const bestWeek = Math.max(...weeklyGains);
+  const bestWeekIdx = weeklyGains.indexOf(bestWeek);
+  const avgGain = weeklyGains.length > 0 ? (weeklyGains.reduce((a,b) => a+b, 0) / weeklyGains.length).toFixed(1) : '—';
+
+  document.getElementById('modal-stats').innerHTML = `
+    <div class="modal-stat">
+      <div class="stat-val" style="color:${color}">${currentScore}</div>
+      <div class="stat-lbl">Total Score</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-val">${avgGain}</div>
+      <div class="stat-lbl">Avg pts/week</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-val">+${bestWeek}</div>
+      <div class="stat-lbl">Best week (${activeWeeks[bestWeekIdx]?.replace('Week ','W')})</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-val">${scores.length}</div>
+      <div class="stat-lbl">Weeks played</div>
+    </div>
+  `;
+
+  // Destroy previous chart
+  if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
+
+  // Build chart
+  const canvas = document.getElementById('modal-chart');
+  modalChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: activeWeeks,
+      datasets: [{
+        label: player.name,
+        data: activeWeeks.map(w => player.scores[w] ?? null),
+        borderColor: color,
+        backgroundColor: color + '22',
+        borderWidth: 3,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        pointBackgroundColor: color,
+        fill: true,
+        tension: 0.35,
+        spanGaps: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1f1f1f',
+          borderColor: color,
+          borderWidth: 1,
+          titleColor: '#f1f5f9',
+          bodyColor: color,
+          padding: 10,
+          callbacks: {
+            label: ctx => ` Score: ${ctx.parsed.y}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: '#1f1f1f' },
+          ticks: { color: '#64748b', font: { size: 11 } },
+        },
+        y: {
+          grid: { color: '#1f1f1f' },
+          ticks: { color: '#64748b', font: { size: 11 } },
+          title: { display: true, text: 'Cumulative Score', color: '#64748b' },
+        },
+      },
+    },
+  });
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePlayerModal() {
+  document.getElementById('player-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('modal-close').addEventListener('click', closePlayerModal);
+document.getElementById('player-modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closePlayerModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePlayerModal();
+});
+
+// ── LOAD CSV ─────────────────────────────────────────────────────────────────
+// On GitHub Pages (and any HTTP server), fetch loads the file automatically.
+// Opening index.html as a local file:// will show the fallback picker below.
+fetch('current-standings.csv')
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+  .then(text => init(text))
+  .catch(() => {
+    document.getElementById('week-badge').textContent = 'Could not load CSV';
+    document.getElementById('leaderboard').innerHTML = `
+      <div style="text-align:center;padding:60px 20px;color:var(--muted)">
+        <div style="font-size:2.5rem;margin-bottom:16px">📂</div>
+        <p style="font-size:1.05rem;margin-bottom:8px;color:var(--text)">Could not load <strong>current-standings.csv</strong></p>
+        <p style="font-size:.85rem;max-width:420px;margin:0 auto 24px;line-height:1.8">
+          On GitHub Pages this loads automatically.<br>
+          For local testing, run in the project folder:<br>
+          <code style="background:var(--surface2);padding:6px 14px;border-radius:6px;display:inline-block;margin-top:8px">python3 -m http.server 8080</code>
+        </p>
+        <label style="background:var(--accent);color:#fff;padding:10px 26px;border-radius:999px;cursor:pointer;font-weight:700;font-size:.88rem;display:inline-block">
+          Or pick the CSV file manually
+          <input type="file" accept=".csv" id="csv-manual-input" style="display:none">
+        </label>
+      </div>`;
+    document.getElementById('csv-manual-input').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => init(ev.target.result);
+      reader.readAsText(file);
+    });
+  });
+</script>
+</body>
+</html>
