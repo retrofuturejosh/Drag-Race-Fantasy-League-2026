@@ -234,6 +234,7 @@
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 24px;
+      position: relative;
     }
     .chart-title {
       font-size: 1rem;
@@ -391,6 +392,27 @@
     #modal-chart-wrap {
       padding: 20px 24px 24px;
     }
+
+    /* ── CHART CONTROLS ── */
+    .chart-controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .chart-ctrl-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 5px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      transition: all .15s;
+    }
+    .chart-ctrl-btn:hover { border-color: var(--accent); color: var(--text); }
   </style>
 </head>
 <body>
@@ -641,6 +663,15 @@ function buildChart() {
   wrapper.appendChild(canvas);
   container.appendChild(wrapper);
 
+  // Controls
+  const controls = document.createElement('div');
+  controls.className = 'chart-controls';
+  controls.innerHTML = `
+    <button class="chart-ctrl-btn" id="btn-select-all">Select All</button>
+    <button class="chart-ctrl-btn" id="btn-unselect-all">Unselect All</button>
+  `;
+  wrapper.insertBefore(controls, canvas);
+
   const isMobile = window.innerWidth < 600;
 
   const datasets = sorted.map((player, idx) => ({
@@ -660,17 +691,70 @@ function buildChart() {
     data: { labels: activeWeeks, datasets },
     options: {
       responsive: true,
-      maintainAspectRatio: !isMobile,
+      maintainAspectRatio: true,
+      aspectRatio: isMobile ? 1.2 : 2.2,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
           position: isMobile ? 'bottom' : 'right',
           labels: {
             color: '#94a3b8',
-            font: { size: isMobile ? 9 : 11 },
-            padding: isMobile ? 6 : 10,
-            boxWidth: isMobile ? 10 : 14,
-            boxHeight: 3,
+            font: { size: isMobile ? 9 : 14 },
+            padding: isMobile ? 6 : 14,
+            boxWidth: isMobile ? 10 : 16,
+            boxHeight: isMobile ? 10 : 16,
+            usePointStyle: false,
+            generateLabels(chart) {
+              return chart.data.datasets.map((ds, i) => {
+                const meta = chart.getDatasetMeta(i);
+                const hidden = meta.hidden;
+                return {
+                  text: ds.label,
+                  datasetIndex: i,
+                  fillStyle: hidden ? 'transparent' : ds.borderColor,
+                  strokeStyle: ds.borderColor,
+                  lineWidth: 2,
+                  fontColor: hidden ? '#3a3a4a' : '#94a3b8',
+                  hidden,
+                };
+              });
+            },
+          },
+          onHover(e) {
+            e.native.target.style.cursor = 'pointer';
+          },
+          onLeave(e) {
+            e.native.target.style.cursor = 'default';
+          },
+          onClick(e, legendItem, legend) {
+            const index = legendItem.datasetIndex;
+            const chart = legend.chart;
+            const meta = chart.getDatasetMeta(index);
+            const isHidden = meta.hidden;
+
+            // Flash the line: briefly boost width then settle
+            const dataset = chart.data.datasets[index];
+            const origWidth = dataset.borderWidth;
+
+            if (isHidden) {
+              // Showing: flash bright
+              meta.hidden = false;
+              dataset.borderWidth = origWidth * 3;
+              chart.update('none');
+              setTimeout(() => {
+                dataset.borderWidth = origWidth;
+                chart.update('none');
+              }, 220);
+            } else {
+              // Hiding: flash dim then hide
+              dataset.borderWidth = origWidth * 2.5;
+              chart.update('none');
+              setTimeout(() => {
+                meta.hidden = true;
+                dataset.borderWidth = origWidth;
+                chart.update('none');
+              }, 180);
+            }
           },
         },
         tooltip: {
@@ -697,6 +781,18 @@ function buildChart() {
         },
       },
     },
+  });  // end new Chart
+
+  const mainChart = Chart.getChart('scoreChart');
+
+  document.getElementById('btn-unselect-all').addEventListener('click', () => {
+    mainChart.data.datasets.forEach((_, i) => mainChart.setDatasetVisibility(i, false));
+    mainChart.update();
+  });
+
+  document.getElementById('btn-select-all').addEventListener('click', () => {
+    mainChart.data.datasets.forEach((_, i) => mainChart.setDatasetVisibility(i, true));
+    mainChart.update();
   });
 }
 
