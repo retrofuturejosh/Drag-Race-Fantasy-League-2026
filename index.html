@@ -256,8 +256,40 @@
 
     /* ── RESPONSIVE ── */
     @media (max-width: 600px) {
-      .player-card { grid-template-columns: 40px 1fr auto; gap: 10px; padding: 12px 14px; }
-      .score-badge { font-size: 1.25rem; }
+      header { padding: 20px 16px 18px; }
+      header .crown { font-size: 1.8rem; }
+
+      nav { gap: 6px; padding: 14px 12px 0; }
+      .tab-btn { padding: 7px 14px; font-size: .8rem; }
+
+      main { padding: 16px 10px 48px; }
+
+      /* Leaderboard cards */
+      .player-card {
+        grid-template-columns: 36px 1fr auto;
+        gap: 8px;
+        padding: 10px 12px;
+      }
+      .rank-num { font-size: 1.1rem; width: 28px; }
+      .rank-num.other { font-size: .9rem; }
+      .player-info .name { font-size: .95rem; }
+      .player-info .week-scores { display: none; } /* hide pills on small screens */
+      .score-badge { font-size: 1.15rem; min-width: 42px; }
+
+      /* Chart */
+      .chart-container { padding: 14px 10px 16px; }
+      .chart-title { font-size: .82rem; margin-bottom: 12px; }
+
+      /* Modal */
+      #player-modal { border-radius: 16px; }
+      #modal-header { padding: 16px 16px 0; }
+      #modal-player-name { font-size: 1.15rem; }
+      #modal-rank-badge { font-size: .7rem; padding: 2px 9px; }
+      #modal-stats { padding: 12px 16px 0; gap: 8px; }
+      .modal-stat { padding: 8px 10px; min-width: 70px; }
+      .modal-stat .stat-val { font-size: 1.1rem; }
+      .modal-stat .stat-lbl { font-size: .62rem; }
+      #modal-chart-wrap { padding: 14px 16px 18px; }
     }
 
     /* ── PLAYER MODAL ── */
@@ -606,18 +638,19 @@ function buildChart() {
 
   const canvas = document.createElement('canvas');
   canvas.id = 'scoreChart';
-  canvas.style.maxHeight = '520px';
   wrapper.appendChild(canvas);
   container.appendChild(wrapper);
+
+  const isMobile = window.innerWidth < 600;
 
   const datasets = sorted.map((player, idx) => ({
     label: player.name,
     data: activeWeeks.map(w => player.scores[w] ?? null),
     borderColor: PALETTE[idx % PALETTE.length],
     backgroundColor: PALETTE[idx % PALETTE.length] + '22',
-    borderWidth: 2,
-    pointRadius: 4,
-    pointHoverRadius: 7,
+    borderWidth: isMobile ? 1.5 : 2,
+    pointRadius: isMobile ? 2 : 4,
+    pointHoverRadius: isMobile ? 5 : 7,
     tension: 0.3,
     spanGaps: false,
   }));
@@ -627,15 +660,16 @@ function buildChart() {
     data: { labels: activeWeeks, datasets },
     options: {
       responsive: true,
+      maintainAspectRatio: !isMobile,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          position: 'right',
+          position: isMobile ? 'bottom' : 'right',
           labels: {
             color: '#94a3b8',
-            font: { size: 11 },
-            padding: 10,
-            boxWidth: 14,
+            font: { size: isMobile ? 9 : 11 },
+            padding: isMobile ? 6 : 10,
+            boxWidth: isMobile ? 10 : 14,
             boxHeight: 3,
           },
         },
@@ -654,12 +688,12 @@ function buildChart() {
       scales: {
         x: {
           grid: { color: '#1f1f1f' },
-          ticks: { color: '#64748b', font: { size: 11 } },
+          ticks: { color: '#64748b', font: { size: isMobile ? 9 : 11 }, maxRotation: 45 },
         },
         y: {
           grid: { color: '#1f1f1f' },
-          ticks: { color: '#64748b', font: { size: 11 } },
-          title: { display: true, text: 'Cumulative Score', color: '#64748b' },
+          ticks: { color: '#64748b', font: { size: isMobile ? 9 : 11 } },
+          title: { display: !isMobile, text: 'Cumulative Score', color: '#64748b' },
         },
       },
     },
